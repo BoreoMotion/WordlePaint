@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle Painter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Slabo+27px&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
+    <style>
+        /* Color Palette & Typography */
+        :root {
+            --green: #538d4e;
+            --yellow: #b59f3b;
+            --absent: #3a3a3c;
+            --bg-color: #121213;
+            --text-color: #ffffff; 
+            --danger: #e74c3c;
+            --border-color: #3a3a3c;
+            --modal-bg: #121213;
+            --modal-item-bg: #1a1a1b;
+            --font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+            --title-font: "Slabo 27px", serif;
+            --tile-size: 60px;
+        }
+
+        /* Light Mode Variables */
+        [data-theme="light"] {
+            --green: #6aaa64;
+            --yellow: #c9b458;
+            --absent: #787c7e;
+            --bg-color: #ffffff;
+            --text-color: #121213; 
+            --border-color: #d3d6da;
+            --modal-bg: #ffffff;
+            --modal-item-bg: #f3f3f3;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; 
+            min-height: 100vh;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            overflow-x: hidden;
+        }
+
+        /* Full-Width Custom Title Bar */
+        header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            margin-bottom: 40px;
+            height: 60px;
+        }
+
+        .header-left, .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        h1 {
+            font-family: var(--title-font);
+            font-size: 28px;
+            font-weight: 400;
+            margin: 0;
+            letter-spacing: 0.05rem;
+        }
+
+        #word-count-box {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--green);
+            background-color: var(--modal-item-bg);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 6px;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .header-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 26px;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s ease, opacity 0.2s ease, transform 0.1s ease;
+        }
+        
+        .header-btn:hover {
+            opacity: 0.7;
+        }
+
+        .header-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* Central App Container */
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            padding: 0 20px 40px 20px;
+        }
+
+        /* Target Input Area */
+        #target-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        #target-container label {
+            font-size: 18px;
+            font-weight: 700;
+            color: #818384;
+            text-transform: uppercase;
+        }
+
+        #target-word-input {
+            background-color: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: 24px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 8px;
+            text-align: center;
+            width: 150px;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        #target-word-input:focus { border-color: var(--green); }
+
+        /* Game Grid Layout */
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px; 
+            width: 100%;
+        }
+        
+        .row-wrapper {
+            position: relative; 
+            display: flex;
+            width: max-content; 
+            margin: 0 auto; 
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px; 
+        }
+        
+        /* The Tiles */
+        .tile {
+            width: var(--tile-size);
+            height: var(--tile-size);
+            background-color: var(--absent);
+            color: #ffffff;
+            font-size: 2rem;
+            font-weight: 700;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.15s ease;
+        }
+
+        .tile[data-state="absent"] { background-color: var(--absent); }
+        .tile[data-state="present"] { background-color: var(--yellow); }
+        .tile[data-state="correct"] { background-color: var(--green); }
+
+        /* Status Icon Buttons */
+        .status-icon {
+            position: absolute; 
+            left: calc(100% + 15px); 
+            top: 50%;
+            margin-top: -20px; 
+            font-size: 32px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            outline: none;
+            transition: transform 0.15s ease, color 0.15s ease;
+            user-select: none;
+        }
+
+        .icon-loading { color: var(--border-color); cursor: default; }
+        
+        .icon-possible { 
+            color: var(--green); 
+            cursor: pointer; 
+        }
+        .icon-possible:hover { 
+            transform: scale(1.15); 
+        }
+        
+        .icon-impossible { 
+            color: var(--danger); 
+            cursor: default; 
+        }
+
+        /* Modern Glass Modal */
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        #modal-content {
+            background-color: var(--modal-bg);
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 450px;
+            width: 90%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transform: translateY(20px);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+
+        #modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        #modal-title { font-size: 22px; font-weight: 700; margin: 0; color: var(--text-color); }
+        
+        #close-modal {
+            background: none;
+            color: #818384;
+            font-size: 28px;
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        #close-modal:hover { color: var(--text-color); }
+
+        #modal-word-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        #modal-word-list::-webkit-scrollbar { width: 8px; }
+        #modal-word-list::-webkit-scrollbar-track { background: var(--modal-bg); border-radius: 4px; }
+        #modal-word-list::-webkit-scrollbar-thumb { background: #565758; border-radius: 4px; }
+
+        .match-word {
+            background-color: var(--modal-item-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            text-align: center;
+            letter-spacing: 1px;
+            transition: background-color 0.2s ease;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <h1>Wordle Painter</h1>
+        <div id="word-count-box">Fetching...</div>
+    </div>
+    <div class="header-right">
+        <button id="clear-btn" class="material-symbols-outlined header-btn" title="Clear Grid">restart_alt</button>
+        <button id="theme-toggle" class="material-symbols-outlined header-btn" title="Toggle Theme">light_mode</button>
+    </div>
+</header>
+
+<div id="app-container">
+    <div id="target-container">
+        <label for="target-word-input">Target Word</label>
+        <input type="text" id="target-word-input" value="WOMEN" maxlength="5">
+    </div>
+
+    <div id="game-container"></div>
+</div>
+
+<p style="font-size: 11px; color: #565758; text-align: center; max-width: 420px; margin-top: auto; margin-bottom: 20px; padding: 0 20px; line-height: 1.5; font-family: var(--font-family);">
+    Wordle Painter™ is an interactive reverse-engineering tool. Paint custom color patterns on the grid to instantly calculate and reveal all mathematically possible dictionary matches for your target word. Created by Baraa, Inspired by Yahya.
+</p>
+
+<div id="modal-overlay">
+    <div id="modal-content">
+        <div id="modal-header">
+            <h2 id="modal-title">Matches</h2>
+            <button id="close-modal">&times;</button>
+        </div>
+        <div id="modal-word-list"></div>
+    </div>
+</div>
+
+<script>
+    let dictionary = [];
+    let currentTargetWord = "WOMEN";
+    const states = ['absent', 'present', 'correct'];
+    const rowMatches = [[], [], [], [], [], []]; 
+
+    // Theme Toggle Logic
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', () => {
+        const isLightMode = document.body.getAttribute('data-theme') === 'light';
+        if (isLightMode) {
+            document.body.removeAttribute('data-theme');
+            themeToggle.textContent = 'light_mode'; 
+        } else {
+            document.body.setAttribute('data-theme', 'light');
+            themeToggle.textContent = 'dark_mode'; 
+        }
+    });
+
+    // Clear Grid Logic
+    document.getElementById('clear-btn').addEventListener('click', () => {
+        const tiles = document.querySelectorAll('.tile');
+        tiles.forEach(tile => tile.setAttribute('data-state', 'absent'));
+        updateAllRows();
+    });
+
+    // Fetch the raw text file from GitHub
+    async function loadDictionary() {
+        const url = "https://raw.githubusercontent.com/KMChris/paint-on-wordle/refs/heads/main/src/data/words.txt";
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Network response was not ok");
+            const text = await response.text();
+            
+            dictionary = text.split('\n')
+                .map(w => w.trim().replace(/[^A-Za-z]/g, '').toUpperCase())
+                .filter(w => w.length === 5);
+                
+            const wordCount = document.getElementById('word-count-box');
+            wordCount.textContent = `${dictionary.length.toLocaleString()}`;
+            
+            updateAllRows();
+        } catch (error) {
+            const wordCount = document.getElementById('word-count-box');
+            wordCount.textContent = `Error`;
+            wordCount.style.color = "var(--danger)";
+        }
+    }
+
+    // Core Wordle Scoring Logic
+    function getPatternForGuess(guess, target) {
+        let result = [0, 0, 0, 0, 0];
+        let targetCounts = {};
+        guess = guess.split('');
+        target = target.split('');
+
+        for (let i = 0; i < 5; i++) {
+            const char = target[i];
+            targetCounts[char] = (targetCounts[char] || 0) + 1;
+            if (guess[i] === char) {
+                result[i] = 2; // Correct
+                targetCounts[char] -= 1;
+            }
+        }
+
+        for (let i = 0; i < 5; i++) {
+            if (result[i] === 0) {
+                const char = guess[i];
+                if (targetCounts[char] > 0) {
+                    result[i] = 1; // Present
+                    targetCounts[char] -= 1;
+                }
+            }
+        }
+        return result.join('');
+    }
+
+    function getPatternFromRow(rowEl) {
+        const tiles = rowEl.querySelectorAll('.tile');
+        let patternCode = "";
+        tiles.forEach(tile => {
+            patternCode += states.indexOf(tile.getAttribute('data-state'));
+        });
+        return patternCode;
+    }
+
+    function updateAllRows() {
+        if (dictionary.length === 0) return;
+
+        const isValidTarget = currentTargetWord.length === 5;
+
+        const rows = document.querySelectorAll('.row-wrapper');
+        rows.forEach((wrapper, index) => {
+            const rowEl = wrapper.querySelector('.row');
+            const patternToFind = getPatternFromRow(rowEl);
+            const iconBtn = wrapper.querySelector('.status-icon');
+
+            // Hide the button if target is invalid or the row is completely unpainted (00000)
+            if (!isValidTarget || patternToFind === '00000') {
+                iconBtn.style.display = 'none';
+                rowMatches[index] = [];
+                return;
+            }
+
+            // Otherwise, show the button and calculate
+            iconBtn.style.display = 'flex';
+            let matches = [];
+            for (let word of dictionary) {
+                if (getPatternForGuess(word, currentTargetWord) === patternToFind) {
+                    matches.push(word);
+                }
+            }
+            
+            rowMatches[index] = matches;
+
+            iconBtn.className = 'status-icon material-symbols-outlined';
+            iconBtn.onclick = null;
+
+            if (matches.length > 0) {
+                iconBtn.textContent = "check_circle";
+                iconBtn.classList.add('icon-possible');
+                iconBtn.onclick = () => openModal(index);
+            } else {
+                iconBtn.textContent = "dangerous";
+                iconBtn.classList.add('icon-impossible');
+            }
+        });
+    }
+
+    // Build the Grid
+    function createGrid() {
+        const gameContainer = document.getElementById('game-container');
+        gameContainer.innerHTML = ''; 
+
+        for (let r = 0; r < 6; r++) {
+            const wrapper = document.createElement('div');
+            wrapper.classList.add('row-wrapper');
+
+            const rowEl = document.createElement('div');
+            rowEl.classList.add('row');
+            
+            for (let c = 0; c < 5; c++) {
+                const tileEl = document.createElement('div');
+                tileEl.classList.add('tile');
+                tileEl.setAttribute('data-state', 'absent'); 
+                
+                tileEl.addEventListener('click', function() {
+                    const currentState = this.getAttribute('data-state');
+                    let nextStateIndex = (states.indexOf(currentState) + 1) % states.length;
+                    this.setAttribute('data-state', states[nextStateIndex]);
+                    
+                    updateAllRows();
+                });
+                rowEl.appendChild(tileEl);
+            }
+
+            const iconBtn = document.createElement('button');
+            iconBtn.classList.add('status-icon', 'material-symbols-outlined');
+            iconBtn.style.display = 'none'; // Hidden by default
+            iconBtn.textContent = "more_horiz";
+
+            wrapper.appendChild(rowEl);
+            wrapper.appendChild(iconBtn);
+            gameContainer.appendChild(wrapper);
+        }
+    }
+
+    // Modal Handlers
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalContent = document.getElementById('modal-content');
+    const modalTitle = document.getElementById('modal-title');
+    const modalWordList = document.getElementById('modal-word-list');
+    
+    function openModal(rowIndex) {
+        modalTitle.textContent = `Matches: ${rowMatches[rowIndex].length}`;
+        modalWordList.innerHTML = '';
+        
+        rowMatches[rowIndex].forEach(word => {
+            const wordEl = document.createElement('div');
+            wordEl.classList.add('match-word');
+            wordEl.textContent = word;
+            modalWordList.appendChild(wordEl);
+        });
+        
+        modalOverlay.style.display = 'flex';
+        setTimeout(() => {
+            modalOverlay.style.opacity = '1';
+            modalContent.style.transform = 'translateY(0)';
+        }, 10);
+    }
+
+    function closeModal() {
+        modalOverlay.style.opacity = '0';
+        modalContent.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            modalOverlay.style.display = 'none';
+        }, 200); 
+    }
+
+    document.getElementById('close-modal').onclick = closeModal;
+    modalOverlay.onclick = (e) => { if(e.target === modalOverlay) closeModal(); }
+
+    // Target Word Input Logic
+    document.getElementById('target-word-input').addEventListener('input', function() {
+        const val = this.value.trim().toUpperCase();
+        
+        // Ensure only valid letters are typed
+        this.value = val.replace(/[^A-Z]/g, '');
+
+        if (this.value.length === 5) {
+            currentTargetWord = this.value;
+        }
+        // Call updateAllRows anyway so icons hide if length < 5
+        updateAllRows();
+    });
+
+    // Initialization
+    createGrid();
+    loadDictionary();
+</script>
+
+</body>
+</html>
